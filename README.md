@@ -6,7 +6,7 @@ STEP 1: Quality Control with fastqc
 generate json input files based on the file_1.fq.gz file_2.fq.gz naming convention:
 
 ```
-ls *1.fq.gz | xargs -i bash -c 'BASENAME2=$(echo {} | cut -d "." -f 1 | cut -d "_" -f 1); echo $BASENAME2' | xargs -i bash -c 'echo "{\"generate_fastqc_report_workflow.generate_fastqc_report.fastq_1\":\"{}_1.fq.gz\",\"generate_fastqc_report_workflow.generate_fastqc_report.fastq_2\":\"{}_2.fq.gz\"}">{}-input.json'
+ls *1.fq.gz | xargs -i bash -c 'BASENAME2=$(echo {} | cut -d "." -f 1 | cut -d "_" -f 1); echo $BASENAME2' | xargs -i bash -c 'echo "{\"quality_check_fastqc_workflow.quality_check_fastqc.fastq_1\":\"{}_1.fq.gz\",\"quality_check_fastqc_workflow.quality_check_fastqc.fastq_2\":\"{}_2.fq.gz\"}">{}-input.json'
 ```
 
 run qc on an example file:
