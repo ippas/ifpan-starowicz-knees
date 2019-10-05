@@ -1,7 +1,7 @@
 # ifpan-starowicz-knees
 RNAseq analysis
 
-STEP 1: Quality Control with fastqc
+STEP 1: Quality Control with fastqc VERSION!
 
 generate json input files based on the file_1.fq.gz file_2.fq.gz naming convention:
 
@@ -20,6 +20,10 @@ To run the workflow on all files in the folder (under screen):
 ```
 ls *.json | xargs -i bash -c 'java -jar /opt/tools/cromwell-44.jar run https://gitlab.com/intelliseq/workflows/raw/master/src/main/wdl/tasks/quality-check-fastqc/v0.1/quality-check-fastqc.wdl -i {} > log-{}.txt'
 ```
+To generate the MultiQC 1.7 report:
 
+```
+docker run --rm -v $PWD:/data ewels/multiqc:latest multiqc /data -o /data
+```
 
 
