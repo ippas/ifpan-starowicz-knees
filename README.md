@@ -1,7 +1,7 @@
 # ifpan-starowicz-knees
-RNAseq analysis
+### RNAseq analysis
 
-STEP 1: Quality Control with fastqc VERSION!
+#### STEP 1: Quality Control with fastqc VERSION!
 
 generate json input files based on the file_1.fq.gz file_2.fq.gz naming convention:
 
@@ -25,5 +25,4 @@ To generate the MultiQC 1.7 report:
 ```
 docker run --rm -v $PWD:/data ewels/multiqc:latest multiqc /data -o /data
 ```
-
-
+[MultiQC report can be found under this link](http://149.156.177.112/projects/ifpan-starowicz-knees/fq/multiqc_report.html#fastqc)
