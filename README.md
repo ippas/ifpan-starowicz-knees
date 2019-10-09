@@ -12,7 +12,7 @@ ls *1.fq.gz | xargs -i bash -c 'BASENAME2=$(echo {} | cut -d "." -f 1 | cut -d "
 run qc on an example file:
 
 ```
-java -jar /opt/tools/cromwell-44.jar run https://gitlab.com/intelliseq/workflows/raw/master/src/main/wdl/tasks/quality-check-fastqc/v0.1/quality-check-fastqc.wdl -i Cac10-input.json > Cac10.txt
+java -jar /opt/tools/cromwell-44.jar run https://raw.githubusercontent.com/gosborcz/workflows/master/intelliseq-quality-check-fastqc.wdl -i Cac10-input.json > Cac10.txt
 ```
 
 To run the workflow on all files in the folder (under screen):
@@ -27,4 +27,16 @@ docker run --rm -v $PWD:/data ewels/multiqc:latest multiqc /data -o /data
 ```
 [MultiQC report can be found under this link](http://149.156.177.112/projects/ifpan-starowicz-knees/fq/multiqc_report.html#fastqc)
 
-#### STEP 2: Alignment to the rat genome
+#### STEP 2: Alignment to the rat genome with Hisat2
+
+Generate input jsons:
+
+```
+ls *1.fq.gz | xargs -i bash -c 'BASENAME=$(echo {} | cut -d "." -f 1 | cut -d "_" -f 1); echo $BASENAME' | xargs -i bash -c 'echo "{\"align_to_rat_genome.align_with_hisat2.fastq1\":\"{}_1.fq.gz\",\"align_to_rat_genome.align_with_hisat2.sample_name\":\"{}\",\"align_to_rat_genome.align_with_hisat2.fastq2\":\"{}_2.fq.gz\"}">{}-input.json'
+```
+Run the workflow (Hisat2 2.1.0.)
+```
+ls *1.fq.gz | xargs -i bash -c 'BASENAME=$(echo {} | cut -d "." -f 1 | cut -d "_" -f 1); echo $BASENAME' | xargs -i bash -c 'java -jar /opt/tools/cromwell-44.jar run https://raw.githubusercontent.com/gosborcz/workflows/master/align-with-hisat2-to-rat-genome -i {}-input.json > log-{}.txt'
+```
+#### STEP 3: Transcript abundance estimation
+
