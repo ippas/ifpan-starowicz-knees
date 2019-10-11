@@ -53,3 +53,9 @@ cuffquant -o /data/cuffquant/{} \
 /data/rn6/Rattus_norvegicus.Rnor_6.0.90.gtf /data/bam/{}.bam'
 ```
 3. Run cuffnorm
+```
+docker run -rm -it -v $PWD:/data octavianus90/cufflinks_final:latest \
+/bin/bash
+  $ LIST=`ls /cuffquant/*/*`
+  $ cuffnorm -o /data/cuffnorm /data/rn6/Rattus_norvegicus.Rnor_6.0.90.gtf $LIST
+```
