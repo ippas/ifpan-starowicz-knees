@@ -38,5 +38,18 @@ Run the workflow (Hisat2 2.1.0.)
 ```
 ls *1.fq.gz | xargs -i bash -c 'BASENAME=$(echo {} | cut -d "." -f 1 | cut -d "_" -f 1); echo $BASENAME' | xargs -i bash -c 'java -jar /opt/tools/cromwell-44.jar run https://raw.githubusercontent.com/gosborcz/workflows/master/align-with-hisat2-to-rat-genome -i {}-input.json > log-{}.txt'
 ```
-#### STEP 3: Transcript abundance estimation
+#### STEP 3: Transcript abundance estimation (cufflinks package v.2.2.1)
 
+1. Create folders to store cuffquant output: 
+```
+ls ./bam | xargs -i basename {} .bam | xargs -i mkdir ./cuffquant/{}
+```
+2. Run cuffquant
+```
+ls ./bam | xargs -i basename {} .bam | xargs \
+-i bash -c 'docker run -d --rm \
+-v $PWD:/data octavianus90/cufflinks_final:latest \
+cuffquant -o /data/cuffquant/{} \
+/data/rn6/Rattus_norvegicus.Rnor_6.0.90.gtf /data/bam/{}.bam'
+```
+3. Run cuffnorm
