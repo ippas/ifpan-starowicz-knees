@@ -1,5 +1,18 @@
 # ifpan-starowicz-knees
-### RNAseq analysis
+
+### Method's summary:
+
+All samples were checked for quality with fastQC v0.11.8 and aligned to a rat reference genome (rn6 from Ensembl database) with hisat2 2.1.0. Cufflinks v 2.2.1 package and GTF from the Ensembl gene database were used to quantify (cuffquant) and normalize (cuffnorm) transcripts to fpkms (Fragments Per Kilobase of transcript per Million fragments mapped). All statisical analyses were performed with R software v3.4. Statistical significance was tested using threy-way ANOVA with repeated measures on log2(1 + x) values with false discovery rate adjustment. Analysis was performed only on paired samples and 5 samples without the contralateral information (due to RNA-quality problems) were excluded.
+
+### Statystical analysis and result files:
+
+1. [sample list with groups](http://149.156.177.112/projects/ifpan-starowicz-knees/analysis/samples-all.csv)
+("Cac" - contralateral, "Cai" - ipsilateral, "MIA"/"NaCl" - model, "jwh"/"veh"/"intact" - types of treatments used)
+2. [summary of results with fpkms for all samples](http://149.156.177.112/projects/ifpan-starowicz-knees/analysis/results-all-fold.csv)
+3. [R analysis code](ifpan-starowicz-knees-analysis.R)
+
+
+### Data-processing steps:
 
 #### STEP 1: Quality Control with fastqc v0.11.8
 
