@@ -114,146 +114,33 @@ colnames(results) <- c("gene.name", "transcipt.ID", "p.one.way", "p.damage", "p.
 
 results <- bind_cols(results, data.frame(fpkms.log))
 
-write.csv(results, "all-genes-aov-adj.csv", row.names = FALSE)
-write.csv(samples, "samples-all.csv", row.names = FALSE)
-
-
-#plot heatmap of top damage induced-genes:
-
-mypalette <- brewer.pal(11,"RdBu")
-morecols <- colorRampPalette(mypalette)
-
-to.plot <- fpkms.log[match(
-  results$transcipt.ID[which(results$p.damage < 0.00003)],
-  rownames(fpkms.log)),
-  samples.paired$file[order(samples.paired$group)]]
-
-group.names <- unique(samples.paired$group[order(samples.paired$group)])
-
-col.labels <- c(rep("", 3), group.names[1], rep(" ", 4), 
-                group.names[2], rep(" ", 5),
-                group.names[3], rep(" ", 5),
-                group.names[4], rep(" ", 4),
-                group.names[5], rep(" ", 4),
-                group.names[6], rep(" ", 3),
-                group.names[7], rep(" ", 4),
-                group.names[8], rep(" ", 4),
-                group.names[9], rep(" ", 5),
-                group.names[10],rep(" ", 5),
-                group.names[11],rep(" ", 4),
-                group.names[12])
-
-
-
-cut.threshold <- function(x, threshold = 2.5) {
-  x[x > threshold] <- threshold
-  x[x < -threshold] <- -threshold
-  x
-}
-
-to.plot %>% 
-  apply(1, scale) %>%
-  t %>%
-  apply(1, cut.threshold, threshold = 3) %>%
-  t %>%
-  `colnames<-`(colnames(to.plot)) %>%
-  heatmap.2(
-    distfun = function(x) as.dist(1-cor(t(x))),
-    col=rev(morecols(50)),trace="none",
-    Colv = FALSE,
-    main="",
-    scale="row",
-    colsep = c(6,11,14,19,25,31,37,42,45,50,56),
-    sepwidth = c(0.3,0.3),
-    labRow=fpkm$gene.name[match(rownames(.), rownames(fpkm))],
-    labCol=col.labels,         
-    srtCol = 45,
-    cexRow = 0.3,
-    offsetCol = 0.1
-  )
-
-#plot a heatmap of top drug-induced genes:
-
-to.plot <- fpkms.log[match(
-  results$transcipt.ID[which(results$p.drug < 0.192)],
-  rownames(fpkms.log)),
-  samples.paired$file[order(samples.paired$group)]]
-
-
-to.plot %>% 
-  apply(1, scale) %>%
-  t %>%
-  apply(1, cut.threshold, threshold = 3) %>%
-  t %>%
-  `colnames<-`(colnames(to.plot)) %>%
-  heatmap.2(
-    distfun = function(x) as.dist(1-cor(t(x))),
-    col=rev(morecols(50)),trace="none",
-    Colv = FALSE,
-    main="",
-    scale="row",
-    colsep = c(6,11,14,19,25,31,37,42,45,50,56),
-    sepwidth = c(0.3,0.3),
-    labRow=fpkm$gene.name[match(rownames(.), rownames(fpkm))],
-    labCol=col.labels,         
-    srtCol = 45,
-    cexRow = 0.3,
-    offsetCol = 0.1
-  )
+#write.csv(results, "all-genes-aov-adj.csv", row.names = FALSE)
+#write.csv(samples, "samples-all.csv", row.names = FALSE)
 
 #calculate fold-changes:
 
 fold.change <- function(x, group, ctrl) {
   abs(mean(as.numeric((x[match(samples$file[samples$group == ctrl],
-                                      colnames(results))])))
-    -
-      mean(as.numeric((x[match(samples$file[samples$group == group],
-                                      colnames(results))]))))
+                               colnames(results))])))
+      -
+        mean(as.numeric((x[match(samples$file[samples$group == group],
+                                 colnames(results))]))))
 }
-  
+
 results %>% mutate(
   fold.change.jwh.vs.veh.ipsi=
-  apply(results, 1, fold.change, group = "Cai.MIA.jwh", ctrl = "Cai.MIA.veh"),
+    apply(results, 1, fold.change, group = "Cai.MIA.jwh", ctrl = "Cai.MIA.veh"),
   fold.change.jwh.vs.veh.contra=
-    apply(results, 1, fold.change, group = "Cac.MIA.jwh", ctrl = "Cac.MIA.veh")
+    apply(results, 1, fold.change, group = "Cac.MIA.jwh", ctrl = "Cac.MIA.veh"),
+  fold.change.mia.vs.nacl.veh.ipsi=
+    apply(results, 1, fold.change, group = "Cai.NaCl.veh", ctrl = "Cai.MIA.veh"),
+  fold.change.mia.vs.nacl.intact.ipsi=
+    apply(results, 1, fold.change, group = "Cai.NaCl.intact", ctrl = "Cai.MIA.intact")
 ) -> results
-  
-# find genes that are significantly affected by dmaage and have a <1.3 fold change
-# and plot them
-
-results %>%
-  filter(p.damage < 0.05) %>%
-  filter(fold.change.jwh.vs.veh.ipsi > 1.3 |
-         fold.change.jwh.vs.veh.contra > 1.3
-         ) %>% data.frame() -> results.fold.filtered
-
-rownames(results.fold.filtered) <- results.fold.filtered$gene.name
 
 
-write.csv(results.fold.filtered, "filtered-results-fold.csv", row.names = FALSE)
 write.csv(results, "results-all-fold.csv", row.names = FALSE)
 
-#results.fold.filtered$gene.name %>% 
-#write.table(quote = FALSE, row.names = FALSE, sep = "\t")
-
-
-results.fold.filtered[,samples.paired$file[order(samples.paired$group)]] %>%
-  apply(1, scale) %>%
-  t %>%
-  apply(1, cut.threshold, threshold = 3) %>%
-  t %>%
-  `colnames<-`(colnames(to.plot)) %>%
-  heatmap.2(
-    distfun = function(x) as.dist(1-cor(t(x))),
-    col=rev(morecols(50)),trace="none",
-    Colv = FALSE,
-    main="",
-    scale="row",
-    colsep = c(6,11,14,19,25,31,37,42,45,50,56),
-    sepwidth = c(0.3,0.3),
-    labCol=col.labels,         
-    srtCol = 45
-  )
 
 #export summary table:
 
@@ -272,4 +159,220 @@ colnames(results.summary) <- c(
   "fold.mia.jwh.vs.veh.contra", "mean.exp"
 )
 
+
+results.summary %>% mutate(
+  fold.change.mia.vs.nacl.veh.ipsi = results$fold.change.mia.vs.nacl.veh.ipsi,
+  fold.change.mia.vs.nacl.intact.ipsi= results$fold.change.mia.vs.nacl.intact.ipsi
+) -> results.summary
+
 write.csv(results.summary, "knees-results-summary.csv", row.names = FALSE)
+
+### adding mean exp from requested groups and creating a new table
+### Requested groups included: 
+
+selected_means <- results[,c(1,2)]
+
+selected_means %>% mutate(
+  mean.ipsi.mia.veh = rowMeans(results[,samples$file[samples$group == "Cai.MIA.veh"]]),
+  mean.ipsi.mia.jwh = rowMeans(results[,samples$file[samples$group == "Cai.MIA.jwh"]]),
+  mean.ipsi.nacl.veh = rowMeans(results[,samples$file[samples$group == "Cai.NaCl.veh"]]),
+  mean.ipsi.nacl.jwh = rowMeans(results[,samples$file[samples$group == "Cai.NaCl.jwh"]])
+) -> selected_means
+
+selected_means <- na.omit(selected_means)
+write.csv(selected_means, "selected_means.csv", row.names = FALSE)
+
+### calculate a t-test for Cai.MIA.veh vs Cai.MIA.jwh
+
+a <- as.factor(samples$group[which(samples$group == "Cai.MIA.veh" | 
+                                     samples$group == "Cai.MIA.jwh")])
+
+
+stat.paired.t <- function(x) {
+  if (is.na(x[1])) { NA
+  } else {
+    tryCatch((t.test(x ~ a))$p.value, error=function(err) NA)
+  }}
+
+
+
+fpkms.log[,samples$file[which(samples$group == "Cai.MIA.veh" | 
+                                samples$group == "Cai.MIA.jwh")]] %>% 
+  apply(1, stat.paired.t) -> results$t.test.mia.cai.veh.vs.jwh
+
+write.csv(results, "all-genes-with-jwh-t-test-unadjusted.csv", row.names = FALSE)
+
+
+#gen a list of genes provided by Kuba and give means for individual samples
+
+up.from.kuba <- scan('up-from-kuba.txt', character())
+down.from.kuba <- scan('down-from-kuba.txt', character())
+changed.from.kuba <- scan('changed-from-kuba.txt', character())
+
+results %>%
+  filter(gene.name %in% changed.from.kuba) %>%
+  select(gene.name, transcipt.ID, samples$file[which(samples$group == "Cai.MIA.veh" | 
+                                                       samples$group == "Cai.MIA.jwh" |
+                                                       samples$group == "Cai.NaCl.veh" |
+                                                       samples$group == "Cai.NaCl.jwh")]) -> selected.fpkm.logs
+
+write.csv(selected.fpkm.logs, "selected-fpkms-log.csv", row.names = FALSE)
+
+
+
+### HEATMAP PLOTTING:
+
+
+
+mypalette <- brewer.pal(11,"RdBu")
+morecols <- colorRampPalette(mypalette)
+
+group.names <- unique(samples.paired$group[order(samples.paired$group)])
+
+col.labels <- c(rep("", 3), group.names[1], rep(" ", 4), 
+                group.names[2], rep(" ", 3),
+                group.names[3], rep(" ", 4),
+                group.names[4], rep(" ", 4),
+                group.names[5], rep(" ", 5),
+                group.names[6], rep(" ", 5),
+                group.names[7], rep(" ", 5),
+                group.names[8], rep(" ", 5),
+                group.names[9], rep(" ", 5),
+                group.names[10],rep(" ", 5),
+                group.names[11],rep(" ", 5),
+                group.names[12])
+
+
+cut.threshold <- function(x, threshold = 2.5) {
+  x[x > threshold] <- threshold
+  x[x < -threshold] <- -threshold
+  x
+}
+
+
+#plot heatmap of top damage induced-genes
+to.plot <- fpkms.log[match(
+  results$transcipt.ID[which(results$p.damage < 0.00003)],
+  rownames(fpkms.log)),
+  samples$file[order(samples$group)]]
+
+#plot a heatmap of top drug-induced genes:
+to.plot <- fpkms.log[match(
+  results$transcipt.ID[which(results$p.drug < 0.192)],
+  rownames(fpkms.log)),
+  samples$file[order(samples$group)]]
+
+#plot a heatmap of top drug-damage interaction genes:
+to.plot <- fpkms.log[match(
+  results$transcipt.ID[which(results$p.drug.damage < 0.3)],
+  rownames(fpkms.log)),
+  samples$file[order(samples$group)]]
+
+to.plot %>% 
+  apply(1, scale) %>%
+  t %>%
+  apply(1, cut.threshold, threshold = 3) %>%
+  t %>%
+  `colnames<-`(colnames(to.plot)) %>%
+  heatmap.2(
+    distfun = function(x) as.dist(1-cor(t(x))),
+    col=rev(morecols(50)),trace="none",
+    Colv = FALSE,
+    main="",
+    scale="row",
+    colsep = c(6,11,14,19,25,31,37,43,49,55,61),
+    sepwidth = c(0.3,0.3),
+    labRow=fpkm$gene.name[match(rownames(.), rownames(fpkm))],
+    labCol=col.labels,         
+    srtCol = 45,
+    cexRow = 0.3,
+    offsetCol = 0.1
+  )
+
+
+# find genes that are significantly affected by dmaage and have a <1 fold change
+# and plot them
+
+results %>%
+  filter(p.damage < 0.1) %>%
+  filter(fold.change.jwh.vs.veh.ipsi > 1
+         ) %>% data.frame() %>% select(samples.paired$file[order(samples.paired$group)]) %>%
+  apply(1, scale) %>%
+  t %>%
+  apply(1, cut.threshold, threshold = 3) %>%
+  t %>%
+  `colnames<-`(colnames(to.plot)) %>%
+  heatmap.2(
+    distfun = function(x) as.dist(1-cor(t(x))),
+    col=rev(morecols(50)),trace="none",
+    Colv = FALSE,
+    main="",
+    scale="row",
+    colsep = c(6,11,14,19,25,31,37,42,45,50,56),
+    sepwidth = c(0.3,0.3),
+    labCol=col.labels,         
+    srtCol = 45
+  )
+
+
+# custom filter go see jwh-reversed genes:
+results %>%
+  filter(p.one.way < 0.2) %>%
+  filter(fold.change.jwh.vs.veh.ipsi > 0.5) -> to.plot
+
+#genes from jwh vs veh t.test
+results %>%
+  filter(t.test.mia.cai.veh.vs.jwh < 0.01) -> to.plot
+
+to.plot %>%
+  select(samples$file[order(samples$group)]) %>%
+  apply(1, scale) %>%
+  t %>%
+  apply(1, cut.threshold, threshold = 3) %>%
+  t %>%
+  `colnames<-`(samples$file[order(samples$group)]) %>%
+  heatmap.2(
+    distfun = function(x) as.dist(1-cor(t(x))),
+    col=rev(morecols(50)),trace="none",
+    Colv = FALSE,
+    cexRow = 0.35,
+    main="",
+    scale="row",
+    colsep = c(6,11,14,19,25,31,37,43,49,55,61),
+    sepwidth = c(0.3,0.3),
+    labCol=col.labels,         
+    srtCol = 45,
+    labRow = to.plot$gene.name,
+    offsetCol = 0
+  )
+
+
+
+#plot heatmaps for genes from Kuba:
+
+results %>%
+  filter(gene.name %in% changed.from.kuba) -> to.plot.all
+
+to.plot <- to.plot.all[complete.cases(to.plot),]
+
+to.plot %>%
+  select(samples$file[order(samples$group)]) %>%
+  apply(1, scale) %>%
+  t %>%
+  apply(1, cut.threshold, threshold = 2.5) %>%
+  t %>% `colnames<-`(samples$file[order(samples$group)]) %>%
+  heatmap.2(
+    distfun = function(x) as.dist(1-cor(t(x))),
+    col=rev(morecols(50)),trace="none",
+    Colv = FALSE,
+    cexRow = 0.5,
+    main="",
+    scale="row",
+    colsep = c(6,11,14,19,25,31,37,43,49,55,61),
+    sepwidth = c(0.3,0.3),
+    labCol=col.labels,         
+    srtCol = 45,
+    labRow = to.plot.all$gene.name,
+    offsetCol = 0
+  )
+
