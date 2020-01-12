@@ -159,7 +159,6 @@ colnames(results.summary) <- c(
   "fold.mia.jwh.vs.veh.contra", "mean.exp"
 )
 
-
 results.summary %>% mutate(
   fold.change.mia.vs.nacl.veh.ipsi = results$fold.change.mia.vs.nacl.veh.ipsi,
   fold.change.mia.vs.nacl.intact.ipsi= results$fold.change.mia.vs.nacl.intact.ipsi
@@ -218,10 +217,57 @@ results %>%
 
 write.csv(selected.fpkm.logs, "selected-fpkms-log.csv", row.names = FALSE)
 
+# identify responders based on preprepared list of genes (from this list https://link.springer.com/article/10.1007/s10142-017-0576-6/figures/3?shared-article-renderer)
+pre_genes = c("Pck1", "Adipoq", "Fabp4", "Lipe", "Itga8", "Itgb8", "Lamb2", "Prdk1",
+              "Prkca", "Fzd8", "Fgf2", "Agt", "Frzb", "Ace", "Bmp6", "Bmp4", "Mmp14",
+              "Mmp2", "Inhba", "Tlr7", "Oplah", "Ahcy", "Tlr2", "Tlr1")
+
+results %>% filter(results$gene.name %in% pre_genes) %>% filter(!is.na(p.one.way)) -> pre_results
+
+#Samples 
+
+to.remove = c("Cai4", "Cai6", "Cai8", "Cai10")
+samples.no.outliers <- samples[!(samples$file %in% to.remove),]
+
+results.no.outliers <- results[c(1,2)]
+
+#perform one-way stat on all groups without outliers:
+
+apply(fpkms.log[,match(samples.no.outliers$file, colnames(fpkms.log))],
+      1,
+      stat.one.way,
+      groups=samples.no.outliers$group) %>% 
+  p.adjust(method="fdr") -> results.no.outliers$p.one.way
+
+### calculate a t-test for Cai.MIA.veh vs Cai.MIA.jwh
+
+a <- as.factor(samples.no.outliers$group[which(samples.no.outliers$group == "Cai.MIA.veh" | 
+                                     samples.no.outliers$group == "Cai.MIA.jwh")])
+
+
+fpkms.log[,samples.no.outliers$file[which(samples.no.outliers$group == "Cai.MIA.veh" | 
+                                samples.no.outliers$group == "Cai.MIA.jwh")]] %>% 
+  apply(1, stat.paired.t) -> results.no.outliers$t.test.mia.cai.veh.vs.jwh
+
+## add counts
+
+results.no.outliers <- bind_cols(results.no.outliers, data.frame(fpkms.log))
+
+## add fold change 
+
+fold.change.2 <- function(x, group, ctrl) {
+  abs(mean(as.numeric((x[match(samples.no.outliers$file[samples.no.outliers$group == ctrl],
+                               colnames(results.no.outliers))])))
+      -
+        mean(as.numeric((x[match(samples.no.outliers$file[samples.no.outliers$group == group],
+                                 colnames(results.no.outliers))]))))
+}
+
+results.no.outliers %>% mutate(fold.change.jwh.vs.veh.ipsi=
+  apply(results.no.outliers, 1, fold.change.2, group = "Cai.MIA.jwh", ctrl = "Cai.MIA.veh")) -> results.no.outliers
 
 
 ### HEATMAP PLOTTING:
-
 
 
 mypalette <- brewer.pal(11,"RdBu")
@@ -289,40 +335,22 @@ to.plot %>%
     offsetCol = 0.1
   )
 
-
-# find genes that are significantly affected by dmaage and have a <1 fold change
-# and plot them
-
-results %>%
-  filter(p.damage < 0.1) %>%
-  filter(fold.change.jwh.vs.veh.ipsi > 1
-         ) %>% data.frame() %>% select(samples.paired$file[order(samples.paired$group)]) %>%
-  apply(1, scale) %>%
-  t %>%
-  apply(1, cut.threshold, threshold = 3) %>%
-  t %>%
-  `colnames<-`(colnames(to.plot)) %>%
-  heatmap.2(
-    distfun = function(x) as.dist(1-cor(t(x))),
-    col=rev(morecols(50)),trace="none",
-    Colv = FALSE,
-    main="",
-    scale="row",
-    colsep = c(6,11,14,19,25,31,37,42,45,50,56),
-    sepwidth = c(0.3,0.3),
-    labCol=col.labels,         
-    srtCol = 45
-  )
-
-
 # custom filter go see jwh-reversed genes:
 results %>%
-  filter(p.one.way < 0.2) %>%
-  filter(fold.change.jwh.vs.veh.ipsi > 0.5) -> to.plot
+  filter(p.one.way < 0.05) %>%
+  filter(fold.change.jwh.vs.veh.ipsi > 0.6) %>% 
+  filter(t.test.mia.cai.veh.vs.jwh < 0.1) %>%
+  filter_at(samples$file, all_vars(. > 2)) -> to.plot
 
-#genes from jwh vs veh t.test
-results %>%
-  filter(t.test.mia.cai.veh.vs.jwh < 0.01) -> to.plot
+write.csv(to.plot, "selected-oneway-0-05-fold-0-6-ttest-0-1-all-counts-2.csv", row.names = FALSE)
+
+# custom filter go see jwh-reversed genes:
+results.no.outliers %>%
+  filter(p.one.way < 0.1) %>%
+  filter(fold.change.jwh.vs.veh.ipsi > 0.7) %>% 
+  filter(t.test.mia.cai.veh.vs.jwh < 0.2) %>%
+  filter_at(samples$file, all_vars(. > 2)) -> to.plot
+
 
 to.plot %>%
   select(samples$file[order(samples$group)]) %>%
@@ -335,7 +363,7 @@ to.plot %>%
     distfun = function(x) as.dist(1-cor(t(x))),
     col=rev(morecols(50)),trace="none",
     Colv = FALSE,
-    cexRow = 0.35,
+    cexRow = 1,
     main="",
     scale="row",
     colsep = c(6,11,14,19,25,31,37,43,49,55,61),
@@ -345,7 +373,6 @@ to.plot %>%
     labRow = to.plot$gene.name,
     offsetCol = 0
   )
-
 
 
 #plot heatmaps for genes from Kuba:
