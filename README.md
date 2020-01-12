@@ -2,7 +2,10 @@
 
 ### Method's summary:
 
-All samples were checked for quality with fastQC v0.11.8 and aligned to a rat reference genome (rn6 from Ensembl database) with hisat2 2.1.0. Cufflinks v 2.2.1 package and GTF from the Ensembl gene database were used to quantify (cuffquant) and normalize (cuffnorm) transcripts to fpkms (Fragments Per Kilobase of transcript per Million fragments mapped). All statisical analyses were performed with R software v3.4. Statistical significance was tested using threy-way ANOVA with repeated measures on log2(1 + x) values with false discovery rate adjustment. Analysis was performed only on paired samples and 5 samples without the contralateral information (due to RNA-quality problems) were excluded.
+All samples were checked for quality with fastQC v0.11.8 and aligned to a rat reference genome (rn6 from Ensembl database) with hisat2 2.1.0. Cufflinks v 2.2.1 package and GTF from the Ensembl gene database were used to quantify (cuffquant) and normalize (cuffnorm) transcripts to fpkms (Fragments Per Kilobase of transcript per Million fragments mapped). 
+
+All statisical analyses were performed with R software v3.4. Top differentially-expressed (DE) genes were chosen based on custom filter set. Two-way RM analysis' results where overwhelmed by MIA effect and identifying drug-regulated genes was not possible with this test. Final set consists of 17 DE genes [see heatmap](http://149.156.177.112/projects/ifpan-starowicz-knees/analysis/custom-filter.pdf) [see table](http://149.156.177.112/projects/ifpan-starowicz-knees/analysis/selected-oneway-0-05-fold-0-6-ttest-0-1-all-counts-2.csv). Filters applied were as follows: one-way ANOVA for all 12 groups: p < 0.05, log2 of fold-changes between MIA-veh-ipsi and MIA-jwh-ipsi: > 0.6, uncorrected t-test between MIA-veh-ipsi and MIA-jwh-ipsi: < 0.1 and log2(fpkm + 1) > 2 in all samples.
+
 
 ### Statystical analysis and result files:
 
