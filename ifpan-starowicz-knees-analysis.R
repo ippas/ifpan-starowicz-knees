@@ -4,6 +4,7 @@ require(magrittr)
 require(gplots)
 require(RColorBrewer)
 require(tidyverse)
+require(stringi)
 
 #create sample info
 samples <- data.frame(read.table('/home/ifpan/projects/ifpan-starowicz-knees/cuffnorm/samples.table',header = TRUE, sep = "\t"))[,c(1,2)]
@@ -135,7 +136,11 @@ results %>% mutate(
   fold.change.mia.vs.nacl.veh.ipsi=
     apply(results, 1, fold.change, group = "Cai.NaCl.veh", ctrl = "Cai.MIA.veh"),
   fold.change.mia.vs.nacl.intact.ipsi=
-    apply(results, 1, fold.change, group = "Cai.NaCl.intact", ctrl = "Cai.MIA.intact")
+    apply(results, 1, fold.change, group = "Cai.NaCl.intact", ctrl = "Cai.MIA.intact"),
+  fold.change.intact.vs.jwh.mia.ipsi=
+    apply(results, 1, fold.change, group = "Cai.MIA.jwh", ctrl = "Cai.MIA.intact"),
+  fold.change.veh.vs.jwh.mia.ipsi=
+    apply(results, 1, fold.change, group = "Cai.MIA.jwh", ctrl = "Cai.MIA.veh")
 ) -> results
 
 
@@ -314,6 +319,13 @@ to.plot <- fpkms.log[match(
   rownames(fpkms.log)),
   samples$file[order(samples$group)]]
 
+
+#plot a heatmap of top drug-damage interaction genes:
+to.plot <- fpkms.log[match(
+  results$transcipt.ID[which(results$p.drug.damage < 0.3)],
+  rownames(fpkms.log)),
+  samples$file[order(samples$group)]]
+
 to.plot %>% 
   apply(1, scale) %>%
   t %>%
@@ -382,7 +394,74 @@ results %>%
 
 to.plot <- to.plot.all[complete.cases(to.plot),]
 
-to.plot %>%
+#plot heatmap of the PCR genes
+pcr.genes <- c("Ccl2", "Col2a1", "Il6", "Timp1", "Timp4", "Comp","Mmp2", "Mmp3", "Mmp9", "Mmp13")
+
+results %>%
+  filter(gene.name %in% pcr.genes) -> to.plot.all
+ 
+to.plot <- to.plot.all[complete.cases(to.plot),]
+
+
+#Heatmap of preselected genes:
+
+read.table("mia_selected_genes.csv") %>% as.vector() %>% t() -> preselected_genes
+preselected_genes_groups <- read.csv("gene_groups.csv", sep = "\t")
+
+results %>%
+  filter(gene.name %in% preselected_genes) %>% select (-c(fold.change.jwh.vs.veh.ipsi, fold.change.jwh.vs.veh.contra)) -> results.preselected
+
+
+
+#run the 3-way ANOVA again:
+
+apply(results.preselected[,match(samples.paired$file, colnames(results.preselected))],
+      1,
+      stat,
+      side = samples.paired$side,
+      damage = samples.paired$damage,
+      drug = samples.paired$drug,
+      animal = samples.paired$animal
+) %>% t %>% apply(.,
+                  2,
+                  p.adjust,
+                  method="fdr") %>% 
+  data.frame() -> temp.results
+
+
+colnames(temp.results) <- c("p.damage", "p.drug", "p.drug.damage", "p.side", "p.side.damage", "p.side.drug", "p.side.drug.damage")
+
+results.preselected[,4:10] <- temp.results
+
+
+write.csv(results.preselected, "results_preselected_genes.csv")
+
+
+# add info about gene groups that each selected gene belongs to
+
+check_gene <- function(x) { 
+  if (x %in% preselected_genes_groups$MMPs) {return("MMPs")}
+  if (x %in% preselected_genes_groups$Ils) {return("Ils")}
+  if (x %in% preselected_genes_groups$CCls) {return("CCls")}
+  if (x %in% preselected_genes_groups$Cols) {return("Cols")}
+  if (x %in% preselected_genes_groups$ECS) {return("ECS")}
+  }
+
+results.preselected$gene_group <-lapply(results.preselected$gene.name, check_gene)
+
+
+results.preselected %>% filter(gene_group == "ECS") %>% filter(p.damage < 0.05) %>% nrow() 
+
+results.preselected %>% filter(gene_group == "ECS") %>% filter(t.test.mia.cai.veh.vs.jwh < 0.3) %>% nrow()
+
+results.preselected %>%filter(gene_group == "ECS") %>%  filter(p.damage < 0.05) %>% filter(t.test.mia.cai.veh.vs.jwh < 0.3) %>% nrow()
+
+results.preselected %>%
+  filter(p.drug < 0.05) -> to.plot
+
+
+ 
+ to.plot %>%
   select(samples$file[order(samples$group)]) %>%
   apply(1, scale) %>%
   t %>%
@@ -392,7 +471,7 @@ to.plot %>%
     distfun = function(x) as.dist(1-cor(t(x))),
     col=rev(morecols(50)),trace="none",
     Colv = FALSE,
-    cexRow = 0.5,
+    cexRow = 1,
     main="",
     scale="row",
     colsep = c(6,11,14,19,25,31,37,43,49,55,61),
@@ -403,3 +482,10 @@ to.plot %>%
     offsetCol = 0
   )
 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
